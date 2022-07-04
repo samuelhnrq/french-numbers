@@ -1,4 +1,4 @@
-import { getDigit, numberSubString } from "./utils";
+import { getDigit, numberSubString, numLen } from "./utils";
 
 const units = [
   "",
@@ -30,21 +30,44 @@ const decimals = [
   "soixante",
 ];
 
-const hundreds = ["cent", "mille"];
+const hundreds = ["", "mille"];
 
 const frenchStuff = ["soixante", "quatre-vingt", "quatre-vingt"];
 
-const edgeCutter = /^(?:un)?-|-$/;
+function edgeCutter(numb: string): string {
+  const regex = /^un-(\w)|-+$|(-)-+/g;
+  return numb.trim().replace(regex, "$1$2");
+}
 
-function simpleDecimal(n: number): string {
-  if (n < units.length) return units[n];
-  if (n >= 70) return laFrance(n);
+function simpleDecimal(n: number) {
   const unitNumber = getDigit(n, 1);
   const tensNumber = getDigit(n, 2);
   const unit = units[unitNumber];
   const tens = decimals[tensNumber];
   const divider = unitNumber === 1 ? "-et-" : "-";
-  return (tens + divider + unit).replace(edgeCutter, "");
+  return tens + divider + unit;
+}
+
+function simpleHundreth(n: number): string {
+  const decimal = Math.floor(n / 100);
+  if (decimal > 0) {
+    n -= 100 * decimal;
+  }
+  let tens: string;
+  if (n < units.length) {
+    tens = units[n];
+  } else if (n >= 70) {
+    tens = laFrance(n);
+  } else {
+    tens = simpleDecimal(n);
+  }
+  if (decimal === 0) {
+    return tens;
+  }
+  if (decimal === 1) {
+    return `cent-${tens}`;
+  }
+  return `${units[decimal]}-cent-${tens}`;
 }
 
 function laFrance(n: number): string {
@@ -53,23 +76,25 @@ function laFrance(n: number): string {
   const tens = frenchStuff[tensNumber - 7];
   let unit: string;
   if (tensNumber === 7 || tensNumber === 9) {
-    unit = simpleDecimal(unitNumber + 10);
+    unit = simpleHundreth(unitNumber + 10);
   } else {
     unit = units[unitNumber];
   }
   if (n === 71) {
     return `${tens}-et-${unit}`;
   }
-  return `${tens}-${unit}`.replace(edgeCutter, "");
+  return `${tens}-${unit}`;
 }
 
 function splitInHundreths(n: number): number[] {
-  const nOfDigits = n === 1 ? 1 : Math.ceil(Math.log10(n));
+  const nOfDigits = numLen(n);
   const nOfHundreths = Math.ceil(nOfDigits / 3);
   const parts: number[] = [];
   for (let x = 0; x < nOfHundreths; x++) {
-    const startingI = x * 3;
-    parts.push(numberSubString(n, startingI, startingI + 3));
+    const endI = nOfDigits - x * 3;
+    const startI = Math.max(0, endI - 3);
+    const nextNumber = numberSubString(n, startI, endI);
+    parts.push(nextNumber);
   }
   return parts;
 }
@@ -77,18 +102,16 @@ function splitInHundreths(n: number): number[] {
 export function toFrenchSpelling(x: number): string {
   const hundredths = splitInHundreths(x);
   let number = "";
-  for (let i = 0; i < hundredths.length; i++) {
+  for (let i = hundredths.length - 1; i >= 0; i--) {
     const n = hundredths[i];
-    // FIXME: all this case is only 0 < n < 100
-    const frenchPart = simpleDecimal(n);
-    if (n > 100) {
-      const hundredth = getDigit(n, 3);
-      const dozensPart = simpleDecimal(n - 100);
-      const final = `${units[hundredth]}-${hundreds[i]}-${dozensPart}`;
-      number += final.replace(edgeCutter, "");
-    } else {
-      number += frenchPart;
-    }
+    console.log("out of", x, "converting", n, "the", i, "part");
+    const frenchPart = simpleHundreth(n);
+    console.log("result is", frenchPart);
+    number += `${frenchPart}-${hundreds[i]}-`;
   }
-  return number;
+  console.log("will trim", number);
+  const trimmed = edgeCutter(number);
+  console.log("now its", trimmed);
+  const final = trimmed.replace(/(-cent|-mille)$/, "$1s");
+  return final;
 }

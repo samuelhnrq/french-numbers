@@ -2,8 +2,12 @@ export function getDigit(number: number, n: number): number {
   return Math.floor((number / Math.pow(10, n - 1)) % 10);
 }
 
+export function numLen(n: number): number {
+  return Math.floor(Math.log10(n) + 1);
+}
+
 export function numberSubString(n: number, start: number, end: number): number {
-  const nDigits = Math.ceil(n === 1 ? 1 : Math.log10(n));
+  const nDigits = numLen(n);
   if (start < 0) {
     throw new Error("invalid range");
   }

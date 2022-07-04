@@ -14,14 +14,13 @@ function NumberInput() {
     [updateNumber]
   );
   return (
-    <>
-      <TextField
-        label="Cardinal number"
-        variant="filled"
-        value={text}
-        onInput={newInput}
-      />
-    </>
+    <TextField
+      label="Cardinal number"
+      variant="filled"
+      autoFocus={true}
+      value={text}
+      onInput={newInput}
+    />
   );
 }
 
